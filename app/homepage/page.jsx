@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import Image from 'next/image';
 import Link from 'next/link';
+import LeaderboardPreviewCard from '../../components/LeaderboardPreviewCard';
 
 export default function Homepage() {
   const [player, setPlayer] = useState(null);
+  const [rank, setRank] = useState(null);
+  const [leaders, setLeaders] = useState([]);
 
   useEffect(() => {
     const fetchPlayer = async () => {
@@ -14,18 +17,71 @@ export default function Homepage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        console.warn('No user found');
+        return;
+      }
 
-      const { data } = await supabase
+      let { data: playerData } = await supabase
         .from('players')
-        .select('*')
+        .select('id, name, points, country, avatar_url, hasWon')
         .eq('auth_id', user.id)
         .single();
 
-      setPlayer(data);
+      if (!playerData) {
+        const { data: newPlayer, error: insertError } = await supabase
+          .from('players')
+          .insert([
+            {
+              auth_id: user.id,
+              name: 'New Player',
+              points: 0,
+              country: 'Unknown',
+              avatar_url: null,
+              hasWon: 0,
+            },
+          ])
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating player profile:', insertError);
+          return;
+        }
+
+        playerData = newPlayer;
+      }
+
+      setPlayer(playerData);
+
+      const { data: allPlayers } = await supabase
+        .from('players')
+        .select('id, points');
+
+      if (allPlayers) {
+        const sorted = allPlayers.sort((a, b) => (b.points || 0) - (a.points || 0));
+        const position = sorted.findIndex(p => p.id === playerData.id);
+        setRank(position >= 0 ? position + 1 : null);
+      }
+    };
+
+    const fetchLeaders = async () => {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, name, points, country')
+        .order('points', { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error('Error fetching leaderboard preview:', error);
+        return;
+      }
+
+      setLeaders(data || []);
     };
 
     fetchPlayer();
+    fetchLeaders();
   }, []);
 
   const getCountryFlag = (countryName) => {
@@ -56,7 +112,7 @@ export default function Homepage() {
         </Link>
       </div>
 
-      {player && (
+      {player ? (
         <div className="bg-gradient-to-r from-[#1f2937] to-[#111827] border border-blue-700 p-4 rounded-lg shadow-lg mb-6 animate-fade-in">
           <div className="flex items-center gap-4">
             <Image
@@ -80,12 +136,15 @@ export default function Homepage() {
                       alt={player.country}
                       width={24}
                       height={16}
+                      style={{ height: 'auto' }}
                       className="inline-block mr-2"
                     />
                     {player.country}
                   </>
                 )}
-                <span className="ml-4">🌍 Rank: #{player.rank || '?'}</span>
+                <span className="ml-4">
+                  🌍 Rank: {rank != null ? `#${rank}` : 'Calculating...'}
+                </span>
               </p>
             </div>
           </div>
@@ -100,6 +159,10 @@ export default function Homepage() {
             </div>
             <p className="text-xs text-right text-gray-400 mt-1 animate-pulse">{player.points ?? 0} XP</p>
           </div>
+        </div>
+      ) : (
+        <div className="bg-[#1f2937] text-blue-200 border border-blue-700 p-4 rounded-lg shadow mb-6">
+          Loading player profile or profile not found...
         </div>
       )}
 
@@ -117,6 +180,7 @@ export default function Homepage() {
         >
           ⚽ Start Skill Session
         </Link>
+
         <Link
           href="/player-dashboard"
           className="bg-green-600 text-white px-6 py-4 rounded-lg shadow text-center hover:bg-green-700"
@@ -125,40 +189,34 @@ export default function Homepage() {
         </Link>
       </div>
 
-      <div className="bg-[#1a1a2a] border border-purple-700 p-4 rounded-lg shadow-md mb-10 max-w-4xl mx-auto">
-        <h3 className="text-lg font-semibold mb-3">🌍 Global Leaderboard Preview</h3>
-        <iframe
-          src="/leaderboard-preview"
-          className="w-full h-48 rounded-md border-0"
-          title="Leaderboard Preview"
-        ></iframe>
+      <div className="max-w-4xl mx-auto mb-10">
+        <LeaderboardPreviewCard players={leaders} />
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto mb-10">
-        <Link href="/sacrifice-league/new">
-          <div className="bg-gradient-to-br from-[#222831] to-[#393e46] hover:scale-105 transition-transform duration-300 p-6 rounded-xl shadow-xl text-center font-bold text-xl cursor-pointer border border-blue-600 hover:shadow-glow">
-            <Image src="/tournament-sparkle.png" alt="Tournament Manager Logo" width={80} height={80} className="mx-auto mb-4" />
-            Power League
-            <p className="text-sm font-normal text-gray-300 mt-2">Tournament creator.</p>
-          </div>
-        </Link>
-
-        <Link href="/survivor_mode">
-          <div className="bg-gradient-to-br from-[#2d2d2d] to-[#444] hover:scale-105 transition-transform duration-300 p-6 rounded-xl shadow-xl text-center font-bold text-xl cursor-pointer border border-red-600 hover:shadow-glow">
-            <Image src="/sacrifice_logo.png" alt="Survivor Mode Logo" width={80} height={80} className="mx-auto mb-4" />
-            Survivor Mode
-            <p className="text-sm font-normal text-gray-300 mt-2">Score and survive!</p>
-          </div>
-        </Link>
-
-        <Link href="/powerplay">
-          <div className="bg-gradient-to-br from-[#141e30] to-[#243b55] hover:scale-105 transition-transform duration-300 p-6 rounded-xl shadow-xl text-center font-bold text-xl cursor-pointer border border-green-600 hover:shadow-glow">
-            <Image src="/powerplay-logo.png" alt="PowerPlay Logo" width={80} height={80} className="mx-auto mb-4" />
-            PowerPlay
-            <p className="text-sm font-normal text-gray-300 mt-2">Build. Compete. Dominate.</p>
-          </div>
-        </Link>
+    <Link href="/sacrifice-league/new">
+      <div className="bg-gradient-to-br from-[#222831] to-[#393e46] hover:scale-105 transition-transform duration-300 p-6 rounded-xl shadow-xl text-center font-bold text-xl cursor-pointer border border-blue-600 hover:shadow-glow">
+        <Image src="/tournament-sparkle.png" alt="Tournament Manager Logo" width={80} height={80} className="mx-auto mb-4" />
+        Power League
+        <p className="text-sm font-normal text-gray-300 mt-2">Tournament creator.</p>
       </div>
-    </main>
+    </Link>
+
+    <Link href="/survivor_mode">
+      <div className="bg-gradient-to-br from-[#2d2d2d] to-[#444] hover:scale-105 transition-transform duration-300 p-6 rounded-xl shadow-xl text-center font-bold text-xl cursor-pointer border border-red-600 hover:shadow-glow">
+        <Image src="/sacrifice_logo.png" alt="Survivor Mode Logo" width={80} height={80} className="mx-auto mb-4" />
+        Survivor Mode
+        <p className="text-sm font-normal text-gray-300 mt-2">Score and survive!</p>
+      </div>
+    </Link>
+
+    <Link href="/powerplay">
+      <div className="bg-gradient-to-br from-[#141e30] to-[#243b55] hover:scale-105 transition-transform duration-300 p-6 rounded-xl shadow-xl text-center font-bold text-xl cursor-pointer border border-green-600 hover:shadow-glow">
+        <Image src="/powerplay-logo.png" alt="PowerPlay Logo" width={80} height={80} className="mx-auto mb-4" />
+        PowerPlay
+        <p className="text-sm font-normal text-gray-300 mt-2">Build. Compete. Dominate.</p>
+      </div>
+    </Link>
+  </div>
+</main>
   );
 }

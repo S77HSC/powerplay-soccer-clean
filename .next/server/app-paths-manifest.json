@@ -1,9 +1,11 @@
 {
-  "/not-found": "app/not-found.js",
-  "/leaderboard-preview/page": "app/leaderboard-preview/page.js",
-  "/login/page": "app/login/page.js",
   "/homepage/page": "app/homepage/page.js",
   "/player-dashboard/page": "app/player-dashboard/page.js",
-  "/powerplay/page": "app/powerplay/page.js",
-  "/survivor_mode/page": "app/survivor_mode/page.js"
+  "/leaderboard/page": "app/leaderboard/page.js",
+  "/login/page": "app/login/page.js",
+  "/coach-dashboard/page": "app/coach-dashboard/page.js",
+  "/skill-session/page": "app/skill-session/page.js",
+  "/sacrifice-league/new/page": "app/sacrifice-league/new/page.js",
+  "/survivor_mode/page": "app/survivor_mode/page.js",
+  "/powerplay/page": "app/powerplay/page.js"
 }
