@@ -1,31 +1,23 @@
 // utils/supabaseUtils.js
 import { supabase } from "../lib/supabase";
 
-// ✔️ Login (Email + Password)
-export async function loginUser(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  return { data, error };
+// ✔️ Get current logged-in user
+export async function getCurrentUser() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  return { user: session?.user, error };
 }
 
-// ✔️ Signup
-export async function signupUser(email, password) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  return { data, error };
-}
-
-// ✔️ Logout
+// ✔️ Logout function
 export async function logoutUser() {
   const { error } = await supabase.auth.signOut();
   return { error };
 }
 
-// ✔️ Get current logged-in user
-export async function getCurrentUser() {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  return { user: session?.user, error };
-}
-
-// ✔️ Update workout count by playerName
+// ✔️ Update workout count
 export async function updateWorkoutCount(playerName) {
   if (!playerName) return;
 
@@ -54,23 +46,26 @@ export async function updateWorkoutCount(playerName) {
   }
 }
 
-// ✔️ Log detailed workout history (for charts, XP, etc.)
-export async function logWorkout(playerId, workoutType, xp) {
-  const { data, error } = await supabase.from("workout_history").insert([{
-    player_id: playerId,
-    workout_type: workoutType,
-    xp: xp
-  }]);
-  return { data, error };
-}
-
-// ✔️ Fetch workout history for charts
-export async function fetchWorkoutHistory(playerId) {
+// ✔️ Fetch workout history for chart
+export async function fetchWorkoutHistory(authId) {
   const { data, error } = await supabase
-    .from("workout_history")
-    .select("*")
-    .eq("player_id", playerId)
-    .order("timestamp", { ascending: true });
+    .from("workout_sessions")
+    .select("completed_at, xp_awarded")
+    .eq("auth_id", authId)
+    .order("completed_at", { ascending: true });
 
-  return { data, error };
+  if (error) {
+    console.error("Error fetching workout history:", error);
+    return { data: [], error };
+  }
+
+  return {
+    data: data.map((session) => ({
+      timestamp: session.completed_at,
+      xp: session.xp_awarded,
+    })),
+    error: null,
+  };
 }
+
+

@@ -1,133 +1,268 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import Link from "next/link";
+import { useAuth } from "../../contexts/AuthContext";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 
-export default function PlayerDashboard() {
-  const [searchName, setSearchName] = useState("");
-  const [player, setPlayer] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [notFound, setNotFound] = useState(false);
-  const [rank, setRank] = useState(null);
-  const [topPlayers, setTopPlayers] = useState([]);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
-  const handleSearch = async () => {
-    setLoading(true);
-    setPlayer(null);
-    setRank(null);
-    setNotFound(false);
+export default function PlayerProfile() {
+  const { player, loading } = useAuth();
+  const router = useRouter();
+  const [sessions, setSessions] = useState([]);
+  const [xp, setXp] = useState(0);
+  const [workouts, setWorkouts] = useState(0);
+  const [wins, setWins] = useState(0);
+  const [selectedRange, setSelectedRange] = useState("Weekly");
 
-    const { data: playerData, error: playerError } = await supabase
-      .from("players")
-      .select("*")
-      .eq("name", searchName)
-      .single();
+  useEffect(() => {
+    if (!loading && !player) {
+      router.replace("/login");
+    }
+  }, [loading, player, router]);
 
-    if (!playerData || playerError) {
-      setNotFound(true);
-      setLoading(false);
-      return;
+  useEffect(() => {
+    if (!player?.id) return;
+
+    const fetchData = async () => {
+      const { data: sessionData, error: sessionError } = await supabase
+        .from("workout_sessions")
+        .select("*")
+        .eq("player_id", player.id);
+
+      if (sessionError) {
+        console.error("Failed to fetch sessions", sessionError);
+        return;
+      }
+
+      setSessions(sessionData || []);
+
+      const totalXP = sessionData.reduce((sum, s) => sum + (s.xr_awarded || 0), 0);
+      setXp(totalXP);
+      setWorkouts(sessionData.length);
+      const winCount = sessionData.filter(s => s.is_win).length;
+      setWins(winCount);
+    };
+
+    fetchData();
+  }, [player]);
+
+  const groupedData = {};
+  (sessions || []).forEach((session) => {
+    const date = new Date(session.completed_at);
+    let key;
+
+    if (selectedRange === "Monthly") {
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    } else if (selectedRange === "Daily") {
+      key = date.toISOString().split("T")[0];
+    } else {
+      const firstDayOfWeek = new Date(date);
+      firstDayOfWeek.setDate(date.getDate() - date.getDay());
+      key = firstDayOfWeek.toISOString().split("T")[0];
     }
 
-    setPlayer(playerData);
+    if (!groupedData[key]) {
+      groupedData[key] = { xp: 0, workouts: 0 };
+    }
 
-    const { data: allPlayers } = await supabase
-      .from("players")
-      .select("id, name, points") // ✅ include "id" here
-      .order("points", { ascending: false });
+    groupedData[key].xp += session.xr_awarded || 0;
+    groupedData[key].workouts += 1;
+  });
 
-    const playerIndex = allPlayers.findIndex((p) => p.name === playerData.name);
-    if (playerIndex !== -1) setRank(playerIndex + 1);
+  const labels = Object.keys(groupedData);
+  const xpValues = labels.map((key) => groupedData[key].xp);
+  const workoutCounts = labels.map((key) => groupedData[key].workouts);
 
-    setTopPlayers(allPlayers.slice(0, 10));
-    setLoading(false);
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: "XP Gained",
+        data: xpValues,
+        backgroundColor: "#facc15",
+      },
+      {
+        label: "Workouts",
+        data: workoutCounts,
+        backgroundColor: "#4ade80",
+      },
+    ],
   };
 
-  const unlockSkill =
-    player &&
-    (player.games_played >= 3 || player.points >= 50 || player.matches_won >= 1);
+  const timeChartData = {
+    labels,
+    datasets: [
+      {
+        label: "Time Spent (min)",
+        data: labels.map(label => {
+          const sessionsOnDate = sessions.filter(s => {
+            const date = new Date(s.completed_at);
+            const formatted = selectedRange === "Daily" ? date.toISOString().split("T")[0] :
+              selectedRange === "Monthly" ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` :
+              (() => {
+                const firstDayOfWeek = new Date(date);
+                firstDayOfWeek.setDate(date.getDate() - date.getDay());
+                return firstDayOfWeek.toISOString().split("T")[0];
+              })();
+            return formatted === label;
+          });
+          return parseFloat(sessionsOnDate.reduce((acc, s) => acc + ((s.work_time || 0) * (s.reps || 0)) / 60, 0).toFixed(1));
+        }),
+        borderColor: "#60a5fa",
+        backgroundColor: "rgba(96, 165, 250, 0.3)",
+        fill: true,
+        tension: 0.4,
+      },
+    ]
+  };
 
-  const getBadge = (r) => {
-    if (!r) return "🏃 Beginner";
-    if (r <= 3) return "⚽ World Class";
-    if (r <= 10) return "🔥 Pro";
-    if (r <= 50) return "💪 Semi-Pro";
-    return "🏃 Amateur";
+  const skillsGrouped = {};
+  (sessions || []).forEach((s) => {
+    if (!skillsGrouped[s.skill_name]) {
+      skillsGrouped[s.skill_name] = 0;
+    }
+    skillsGrouped[s.skill_name] += ((s.work_time || 0) * (s.reps || 0)) / 60;
+  });
+
+  const skillTimeChart = {
+    labels: Object.keys(skillsGrouped),
+    datasets: [
+      {
+        label: "Time per Skill (min)",
+        data: Object.values(skillsGrouped),
+        backgroundColor: "#818cf8"
+      }
+    ]
   };
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">🔐 Player Dashboard</h1>
+    <div style={{ background: "#0A0F24", color: "white", padding: "2rem", minHeight: "100vh" }}>
+      {player && (
+        <div style={{ textAlign: "center" }}>
+          <img
+            src={player.avatar_url?.startsWith("http") ? player.avatar_url : `https://uitlajpnqruvvykrcyyg.supabase.co/storage/v1/object/public/avatars/${player.avatar_url}`}
+            alt="avatar"
+            style={{ width: 120, aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: '50%', border: '2px solid #00b4d8', marginBottom: '1rem' }}
+          />
+          <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "#38bdf8" }}>{player.name}</h1>
+          <p style={{ fontSize: "1.1rem", color: "#94a3b8" }}>{player.team}</p>
+          <div style={{ marginTop: "0.5rem" }}>
+            <img
+              src={`https://flagcdn.com/w40/${player.country ? player.country.toLowerCase() : "gb"}.png`}
+              alt={player.country || "GB"}
+              onError={(e) => e.target.style.display = 'none'}
+              style={{ height: "30px", borderRadius: "4px" }}
+            />
+          </div>
+        </div>
+      )}
 
-      <div className="mb-4 flex gap-2">
-        <input
-          type="text"
-          placeholder="Enter player name..."
-          className="flex-1 border px-3 py-2 rounded"
-          value={searchName}
-          onChange={(e) => setSearchName(e.target.value)}
-        />
-        <button
-          onClick={handleSearch}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Search
-        </button>
+      <div style={{ display: "flex", justifyContent: "center", gap: "1rem", margin: "2rem 0" }}>
+        <ProgressRing label="XP" value={xp % 100} max={100} color="#facc15" extraLabel={`Level ${Math.floor(xp / 100)}`} />
+        <ProgressRing label="Sessions" value={workouts % 100} max={100} color="#4ade80" extraLabel={`+${Math.floor(workouts / 100) * 100} pts`} />
+        <ProgressRing label="Wins" value={wins} max={workouts || 1} color="#fb7185" extraLabel={`${Math.round((wins / (workouts || 1)) * 100)}%`} />
       </div>
 
-      {loading && <p>Loading player data...</p>}
-      {notFound && <p className="text-red-500">❌ Player not found.</p>}
+      <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: "1rem" }}>
+        <button onClick={() => setSelectedRange("Daily")} style={buttonStyle(selectedRange === "Daily" ? "#2563eb" : "#4b5563")}>Daily</button>
+        <button onClick={() => setSelectedRange("Weekly")} style={buttonStyle(selectedRange === "Weekly" ? "#2563eb" : "#4b5563")}>Weekly</button>
+        <button onClick={() => setSelectedRange("Monthly")} style={buttonStyle(selectedRange === "Monthly" ? "#2563eb" : "#4b5563")}>Monthly</button>
+      </div>
 
-      {player && (
-        <>
-          <div className="bg-white p-4 rounded shadow">
-            <Link href={`/player/${player.id}`}>
-              <h2 className="text-xl font-semibold mb-2 text-blue-700 hover:underline">
-                👋 Welcome, {player.name}
-              </h2>
-            </Link>
-            <p>Games Played: {player.games_played}</p>
-            <p>Points: {player.points}</p>
-            <p>Matches Won: {player.matches_won}</p>
-            {rank && (
-              <>
-                <p className="mt-2 text-green-600 font-bold">🌍 Global Rank: #{rank}</p>
-                <p className="text-purple-600 font-semibold">🏅 Badge: {getBadge(rank)}</p>
-              </>
-            )}
-          </div>
+      <div style={{ background: "#1f2937", padding: "1rem", borderRadius: "8px", maxWidth: "700px", margin: "0 auto" }}>
+        <Bar data={chartData} />
+      </div>
 
-          <div className="mt-6">
-            {unlockSkill ? (
-              <div className="bg-green-100 text-green-800 p-4 rounded text-center font-semibold">
-                🎉 New Skill Unlocked!
-              </div>
-            ) : (
-              <div className="bg-yellow-100 text-yellow-800 p-4 rounded text-center">
-                🔒 Keep going to unlock your next skill!
-              </div>
-            )}
-          </div>
+      <div style={{ background: "#1f2937", padding: "1rem", borderRadius: "8px", maxWidth: "700px", margin: "2rem auto" }}>
+        <h2 style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "1.2rem", color: "#a5b4fc" }}>Time Spent on Sessions</h2>
+        <Bar data={timeChartData} />
+      </div>
 
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold mb-2">🏆 Top 10 Players</h3>
-            <ul className="space-y-1 text-sm">
-              {topPlayers.map((p, i) => (
-                <li
-                  key={p.id}
-                  className="flex justify-between bg-gray-100 px-3 py-2 rounded"
-                >
-                  <Link href={`/player/${p.id}`} className="text-blue-700 hover:underline">
-                    #{i + 1} {p.name}
-                  </Link>
-                  <span>{p.points} pts</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      )}
+      <div style={{ background: "#1f2937", padding: "1rem", borderRadius: "8px", maxWidth: "700px", margin: "2rem auto" }}>
+        <h2 style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "1.2rem", color: "#a5b4fc" }}>Time by Skill</h2>
+        <Bar data={skillTimeChart} />
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: "2rem" }}>
+        <a href="/skill-session" style={{ backgroundColor: "#38bdf8", color: "#0f172a", padding: "0.75rem 1.5rem", borderRadius: "12px", fontWeight: "bold", textDecoration: "none" }}>
+          🚀 Start Next Session
+        </a>
+      </div>
     </div>
   );
 }
+
+const buttonStyle = (bg) => ({
+  padding: "0.5rem 1rem",
+  backgroundColor: bg,
+  border: "none",
+  color: "white",
+  borderRadius: "6px",
+  cursor: "pointer",
+});
+
+const ProgressRing = ({ label, value, max, color, extraLabel }) => {
+  const percentage = Math.min(100, (value / max) * 100);
+  const radius = 70;
+  const stroke = 30;
+  const normalizedRadius = radius - stroke * 0.5;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <svg height={radius * 2} width={radius * 2}>
+        <circle
+          stroke="#1f2937"
+          fill="transparent"
+          strokeWidth={stroke}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        <circle
+          stroke={color}
+          fill="transparent"
+          strokeWidth={stroke}
+          strokeDasharray={`${circumference} ${circumference}`}
+          style={{ strokeDashoffset, transition: "stroke-dashoffset 0.5s ease" }}
+          r={normalizedRadius}
+          cx={radius}
+          cy={radius}
+        />
+        <text
+          x="50%"
+          y="50%"
+          dy=".3em"
+          textAnchor="middle"
+          fontSize="24"
+          fontWeight="bold"
+          fill="white"
+        >
+          {value}
+        </text>
+      </svg>
+      <div style={{ marginTop: "0.25rem", fontWeight: "bold" }}>{label}</div>
+      {extraLabel && <div style={{ fontSize: "1.2rem", color: "#94a3b8" }}>{extraLabel}</div>}
+    </div>
+  );
+};
