@@ -1,3 +1,4 @@
+// FULL RESTORED VERSION: Player Dashboard
 "use client";
 
 import { useEffect, useState } from "react";
@@ -24,7 +25,7 @@ ChartJS.register(
   Legend
 );
 
-export default function PlayerProfile() {
+export default function PlayerDashboard() {
   const { player, loading } = useAuth();
   const router = useRouter();
   const [sessions, setSessions] = useState([]);
@@ -32,6 +33,17 @@ export default function PlayerProfile() {
   const [workouts, setWorkouts] = useState(0);
   const [wins, setWins] = useState(0);
   const [selectedRange, setSelectedRange] = useState("Weekly");
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+    };
+    checkSession();
+  }, []);
 
   useEffect(() => {
     if (!loading && !player) {
@@ -156,113 +168,52 @@ export default function PlayerProfile() {
 
   return (
     <div style={{ background: "#0A0F24", color: "white", padding: "2rem", minHeight: "100vh" }}>
-      {player && (
-        <div style={{ textAlign: "center" }}>
-          <img
-            src={player.avatar_url?.startsWith("http") ? player.avatar_url : `https://uitlajpnqruvvykrcyyg.supabase.co/storage/v1/object/public/avatars/${player.avatar_url}`}
-            alt="avatar"
-            style={{ width: 120, aspectRatio: '1 / 1', objectFit: 'cover', borderRadius: '50%', border: '2px solid #00b4d8', marginBottom: '1rem' }}
-          />
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "#38bdf8" }}>{player.name}</h1>
-          <p style={{ fontSize: "1.1rem", color: "#94a3b8" }}>{player.team}</p>
-          <div style={{ marginTop: "0.5rem" }}>
-            <img
-              src={`https://flagcdn.com/w40/${player.country ? player.country.toLowerCase() : "gb"}.png`}
-              alt={player.country || "GB"}
-              onError={(e) => e.target.style.display = 'none'}
-              style={{ height: "30px", borderRadius: "4px" }}
-            />
-          </div>
-        </div>
-      )}
+      <div className="max-w-6xl mx-auto">
+  <h1 className="text-3xl font-bold mb-6">📊 Player Dashboard</h1>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: "1rem", margin: "2rem 0" }}>
-        <ProgressRing label="XP" value={xp % 100} max={100} color="#facc15" extraLabel={`Level ${Math.floor(xp / 100)}`} />
-        <ProgressRing label="Sessions" value={workouts % 100} max={100} color="#4ade80" extraLabel={`+${Math.floor(workouts / 100) * 100} pts`} />
-        <ProgressRing label="Wins" value={wins} max={workouts || 1} color="#fb7185" extraLabel={`${Math.round((wins / (workouts || 1)) * 100)}%`} />
-      </div>
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="bg-gray-900 p-6 rounded-lg shadow text-center">
+      <h2 className="text-lg font-semibold mb-2">🏆 Total XP</h2>
+      <p className="text-yellow-400 text-2xl font-bold">{xp}</p>
+    </div>
+    <div className="bg-gray-900 p-6 rounded-lg shadow text-center">
+      <h2 className="text-lg font-semibold mb-2">🔥 Workouts</h2>
+      <p className="text-green-400 text-2xl font-bold">{workouts}</p>
+    </div>
+    <div className="bg-gray-900 p-6 rounded-lg shadow text-center">
+      <h2 className="text-lg font-semibold mb-2">✅ Wins</h2>
+      <p className="text-blue-400 text-2xl font-bold">{wins}</p>
+    </div>
+  </div>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: "1rem" }}>
-        <button onClick={() => setSelectedRange("Daily")} style={buttonStyle(selectedRange === "Daily" ? "#2563eb" : "#4b5563")}>Daily</button>
-        <button onClick={() => setSelectedRange("Weekly")} style={buttonStyle(selectedRange === "Weekly" ? "#2563eb" : "#4b5563")}>Weekly</button>
-        <button onClick={() => setSelectedRange("Monthly")} style={buttonStyle(selectedRange === "Monthly" ? "#2563eb" : "#4b5563")}>Monthly</button>
-      </div>
+  <div className="mb-6">
+    <label className="block text-sm font-medium text-white mb-1">Select Range:</label>
+    <select
+      value={selectedRange}
+      onChange={(e) => setSelectedRange(e.target.value)}
+      className="text-black px-3 py-2 rounded border border-gray-300"
+    >
+      <option value="Daily">Daily</option>
+      <option value="Weekly">Weekly</option>
+      <option value="Monthly">Monthly</option>
+    </select>
+  </div>
 
-      <div style={{ background: "#1f2937", padding: "1rem", borderRadius: "8px", maxWidth: "700px", margin: "0 auto" }}>
-        <Bar data={chartData} />
-      </div>
+  <div className="bg-gray-900 p-6 rounded-lg shadow mb-8">
+    <h2 className="text-xl font-semibold mb-4">📈 XP & Workouts Over Time</h2>
+    <Bar data={chartData} />
+  </div>
 
-      <div style={{ background: "#1f2937", padding: "1rem", borderRadius: "8px", maxWidth: "700px", margin: "2rem auto" }}>
-        <h2 style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "1.2rem", color: "#a5b4fc" }}>Time Spent on Sessions</h2>
-        <Bar data={timeChartData} />
-      </div>
+  <div className="bg-gray-900 p-6 rounded-lg shadow mb-8">
+    <h2 className="text-xl font-semibold mb-4">⏱ Time Spent per Period</h2>
+    <Bar data={timeChartData} />
+  </div>
 
-      <div style={{ background: "#1f2937", padding: "1rem", borderRadius: "8px", maxWidth: "700px", margin: "2rem auto" }}>
-        <h2 style={{ textAlign: "center", marginBottom: "0.5rem", fontSize: "1.2rem", color: "#a5b4fc" }}>Time by Skill</h2>
-        <Bar data={skillTimeChart} />
-      </div>
-
-      <div style={{ textAlign: "center", marginTop: "2rem" }}>
-        <a href="/skill-session" style={{ backgroundColor: "#38bdf8", color: "#0f172a", padding: "0.75rem 1.5rem", borderRadius: "12px", fontWeight: "bold", textDecoration: "none" }}>
-          🚀 Start Next Session
-        </a>
-      </div>
+  <div className="bg-gray-900 p-6 rounded-lg shadow">
+    <h2 className="text-xl font-semibold mb-4">⚽️ Time per Skill</h2>
+    <Bar data={skillTimeChart} />
+  </div>
+</div>
     </div>
   );
 }
-
-const buttonStyle = (bg) => ({
-  padding: "0.5rem 1rem",
-  backgroundColor: bg,
-  border: "none",
-  color: "white",
-  borderRadius: "6px",
-  cursor: "pointer",
-});
-
-const ProgressRing = ({ label, value, max, color, extraLabel }) => {
-  const percentage = Math.min(100, (value / max) * 100);
-  const radius = 70;
-  const stroke = 30;
-  const normalizedRadius = radius - stroke * 0.5;
-  const circumference = normalizedRadius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div style={{ textAlign: "center" }}>
-      <svg height={radius * 2} width={radius * 2}>
-        <circle
-          stroke="#1f2937"
-          fill="transparent"
-          strokeWidth={stroke}
-          r={normalizedRadius}
-          cx={radius}
-          cy={radius}
-        />
-        <circle
-          stroke={color}
-          fill="transparent"
-          strokeWidth={stroke}
-          strokeDasharray={`${circumference} ${circumference}`}
-          style={{ strokeDashoffset, transition: "stroke-dashoffset 0.5s ease" }}
-          r={normalizedRadius}
-          cx={radius}
-          cy={radius}
-        />
-        <text
-          x="50%"
-          y="50%"
-          dy=".3em"
-          textAnchor="middle"
-          fontSize="24"
-          fontWeight="bold"
-          fill="white"
-        >
-          {value}
-        </text>
-      </svg>
-      <div style={{ marginTop: "0.25rem", fontWeight: "bold" }}>{label}</div>
-      {extraLabel && <div style={{ fontSize: "1.2rem", color: "#94a3b8" }}>{extraLabel}</div>}
-    </div>
-  );
-};
