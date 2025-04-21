@@ -2,8 +2,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import PlayerProgressChart from "../../components/PlayerProgressChart";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import { Bar } from "react-chartjs-2";
 import {
@@ -169,51 +170,75 @@ export default function PlayerDashboard() {
   return (
     <div style={{ background: "#0A0F24", color: "white", padding: "2rem", minHeight: "100vh" }}>
       <div className="max-w-6xl mx-auto">
-  <h1 className="text-3xl font-bold mb-6">📊 Player Dashboard</h1>
+        {/* Start New Session Button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => router.push('/skill-session')}
+            className="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold px-4 py-2 rounded shadow transition"
+          >
+            ➕ Start New Workout Session
+          </button>
+        </div>
 
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div className="bg-gray-900 p-6 rounded-lg shadow text-center">
-      <h2 className="text-lg font-semibold mb-2">🏆 Total XP</h2>
-      <p className="text-yellow-400 text-2xl font-bold">{xp}</p>
-    </div>
-    <div className="bg-gray-900 p-6 rounded-lg shadow text-center">
-      <h2 className="text-lg font-semibold mb-2">🔥 Workouts</h2>
-      <p className="text-green-400 text-2xl font-bold">{workouts}</p>
-    </div>
-    <div className="bg-gray-900 p-6 rounded-lg shadow text-center">
-      <h2 className="text-lg font-semibold mb-2">✅ Wins</h2>
-      <p className="text-blue-400 text-2xl font-bold">{wins}</p>
-    </div>
-  </div>
+        {/* 🧍‍♂️ Player Profile Block */}
+        <div className="flex flex-col md:flex-row items-center justify-between bg-gray-900 p-6 rounded-lg shadow mb-8">
+          <div className="flex items-center gap-4">
+            {player?.avatar_url ? (
+              <img
+                src={`https://uitlajpnqruvvykrcyyg.supabase.co/storage/v1/object/public/avatars/${player.avatar_url}`}
+                alt={player.name}
+                className="w-20 h-20 rounded-full object-cover border-2 border-cyan-500"
+              />
+            ) : (
+              <img
+                src="/default-avatar.png"
+                alt="avatar"
+                className="w-20 h-20 rounded-full object-cover border-2 border-cyan-500"
+              />
+            )}
+            <div>
+              <h2 className="text-xl font-bold text-cyan-400">{player?.name}</h2>
+              <p className="text-sm text-gray-400">{player?.team}</p>
+            </div>
+          </div>
 
-  <div className="mb-6">
-    <label className="block text-sm font-medium text-white mb-1">Select Range:</label>
-    <select
-      value={selectedRange}
-      onChange={(e) => setSelectedRange(e.target.value)}
-      className="text-black px-3 py-2 rounded border border-gray-300"
-    >
-      <option value="Daily">Daily</option>
-      <option value="Weekly">Weekly</option>
-      <option value="Monthly">Monthly</option>
-    </select>
-  </div>
+          <div className="flex gap-6 mt-4 md:mt-0">
+            <PlayerProgressChart value={xp % 1000} label="XP" color="#facc15" />
+            <PlayerProgressChart value={workouts} label="Sessions" color="#4ade80" />
+            <PlayerProgressChart value={wins} label="Wins" color="#60a5fa" />
+          </div>
+        </div>
 
-  <div className="bg-gray-900 p-6 rounded-lg shadow mb-8">
-    <h2 className="text-xl font-semibold mb-4">📈 XP & Workouts Over Time</h2>
-    <Bar data={chartData} />
-  </div>
+        <h1 className="text-3xl font-bold mb-6">📊 Player Dashboard</h1>
 
-  <div className="bg-gray-900 p-6 rounded-lg shadow mb-8">
-    <h2 className="text-xl font-semibold mb-4">⏱ Time Spent per Period</h2>
-    <Bar data={timeChartData} />
-  </div>
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-white mb-1">Select Range:</label>
+          <select
+            value={selectedRange}
+            onChange={(e) => setSelectedRange(e.target.value)}
+            className="text-black px-3 py-2 rounded border border-gray-300"
+          >
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+          </select>
+        </div>
 
-  <div className="bg-gray-900 p-6 rounded-lg shadow">
-    <h2 className="text-xl font-semibold mb-4">⚽️ Time per Skill</h2>
-    <Bar data={skillTimeChart} />
-  </div>
-</div>
+        <div className="bg-gray-900 p-6 rounded-lg shadow mb-8">
+          <h2 className="text-xl font-semibold mb-4">📈 XP & Workouts Over Time</h2>
+          <Bar data={chartData} />
+        </div>
+
+        <div className="bg-gray-900 p-6 rounded-lg shadow mb-8">
+          <h2 className="text-xl font-semibold mb-4">⏱ Time Spent per Period</h2>
+          <Bar data={timeChartData} />
+        </div>
+
+        <div className="bg-gray-900 p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">⚽️ Time per Skill</h2>
+          <Bar data={skillTimeChart} />
+        </div>
+      </div>
     </div>
   );
 }
