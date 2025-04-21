@@ -1,5 +1,5 @@
 {
+  "/leaderboard/page": "app/leaderboard/page.js",
   "/homepage/page": "app/homepage/page.js",
-  "/player-dashboard/page": "app/player-dashboard/page.js",
-  "/leaderboard/page": "app/leaderboard/page.js"
+  "/player-dashboard/page": "app/player-dashboard/page.js"
 }

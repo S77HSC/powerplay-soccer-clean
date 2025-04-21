@@ -12,6 +12,15 @@ export default function Homepage() {
   const [leaders, setLeaders] = useState([]);
 
   useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = '/login';
+        return;
+      }
+    };
+
+    checkAuth();
     const fetchPlayer = async () => {
       const {
         data: { user },

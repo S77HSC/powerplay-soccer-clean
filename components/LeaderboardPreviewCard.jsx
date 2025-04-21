@@ -52,7 +52,6 @@ export default function LeaderboardPreviewCard({ players = [], showWorkouts = fa
                       alt={player.name}
                       width={28}
                       height={28}
-                      style={{ height: 'auto', width: 'auto' }}
                       className="object-cover aspect-square rounded-full border"
                     />
                   ) : (
@@ -62,7 +61,7 @@ export default function LeaderboardPreviewCard({ players = [], showWorkouts = fa
                       width={28}
                       height={28}
                       style={{ height: 'auto', width: 'auto' }}
-                      className="aspect-square rounded-full border"
+                      className="object-cover aspect-square rounded-full border"
                     />
                   )}
                   <div className="text-white font-semibold flex items-center gap-2">
