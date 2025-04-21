@@ -118,14 +118,17 @@ export default function Homepage() {
             <Image
               src={
                 player.avatar_url
-                  ? `https://uitlajpnqruvvykrcyyg.supabase.co/storage/v1/object/public/avatars/${player.avatar_url}`
+                  ? (player.avatar_url.startsWith('http')
+                      ? player.avatar_url
+                      : `https://uitlajpnqruvvykrcyyg.supabase.co/storage/v1/object/public/avatars/${player.avatar_url}`)
                   : '/default-avatar.png'
               }
-              alt={player.name}
-              width={64}
-              height={64}
-              className="rounded-full border object-cover"
+              alt="Avatar"
+              width={96}
+              height={96}
+              className="object-cover aspect-square rounded-full border-2 border-cyan-500"
             />
+
             <div>
               <h2 className="text-xl font-bold text-white drop-shadow">{player.name}</h2>
               <p className="text-sm text-blue-300">

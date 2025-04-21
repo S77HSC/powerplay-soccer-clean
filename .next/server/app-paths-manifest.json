@@ -1,6 +1,5 @@
 {
   "/homepage/page": "app/homepage/page.js",
-  "/leaderboard/page": "app/leaderboard/page.js",
-  "/skill-session/page": "app/skill-session/page.js",
-  "/player-dashboard/page": "app/player-dashboard/page.js"
+  "/player-dashboard/page": "app/player-dashboard/page.js",
+  "/leaderboard/page": "app/leaderboard/page.js"
 }

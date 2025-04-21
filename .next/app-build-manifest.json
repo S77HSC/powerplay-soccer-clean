@@ -1,30 +1,25 @@
 {
   "pages": {
+    "/homepage/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/homepage/page.js"
+    ],
     "/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/homepage/page": [
+    "/player-dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/homepage/page.js"
+      "static/chunks/app/player-dashboard/page.js"
     ],
     "/leaderboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/leaderboard/page.js"
-    ],
-    "/skill-session/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/skill-session/page.js"
-    ],
-    "/player-dashboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/player-dashboard/page.js"
     ]
   }
 }
