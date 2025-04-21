@@ -186,20 +186,29 @@ export default function Homepage() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4 mb-10 max-w-2xl mx-auto">
-        <Link
-          href="/skill-session"
-          className="bg-blue-600 text-white px-6 py-4 rounded-lg shadow text-center hover:bg-blue-700"
-        >
-          ⚽ Start Skill Session
-        </Link>
+  <Link
+    href="/skill-session"
+    className="bg-blue-600 text-white px-6 py-4 rounded-lg shadow text-center hover:bg-blue-700"
+  >
+    ⚽ Start Skill Session
+  </Link>
 
-        <Link
-          href="/player-dashboard"
-          className="bg-green-600 text-white px-6 py-4 rounded-lg shadow text-center hover:bg-green-700"
-        >
-          📊 Player Dashboard
-        </Link>
-      </div>
+  <Link
+    href="/player-dashboard"
+    className="bg-green-600 text-white px-6 py-4 rounded-lg shadow text-center hover:bg-green-700"
+  >
+    📊 Player Dashboard
+  </Link>
+
+  {player && (
+    <Link
+      href="/user-settings"
+      className="bg-cyan-600 text-white px-6 py-4 rounded-lg shadow text-center hover:bg-cyan-700 col-span-full"
+    >
+      🧑‍💼 Go to User Settings 
+    </Link>
+  )}
+</div>	
 
       <div className="max-w-4xl mx-auto mb-10">
         <LeaderboardPreviewCard players={leaders} />

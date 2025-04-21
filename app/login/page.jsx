@@ -1,148 +1,112 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "../../lib/supabase";
-import Image from "next/image";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [mode, setMode] = useState("login");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
 
-    let data, error;
-    if (mode === "signup") {
-      ({ data, error } = await supabase.auth.signUp({ email, password }));
-    } else {
-      ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
-    }
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (error) {
-      setError(error.message);
+    console.log('Sign-in result:', loginData, loginError);
+
+    if (loginError || !loginData?.session?.user) {
+      setError(loginError?.message || 'Login failed — invalid credentials.');
       setLoading(false);
       return;
     }
 
-    const user = data?.user || data?.session?.user;
-    if (!user) {
-      setError("No user session found.");
+    const user = loginData.session.user;
+
+    const { data: playerProfile, error: playerError } = await supabase
+      .from('players')
+      .select('id')
+      .eq('auth_id', user.id)
+      .maybeSingle();
+
+    if (!playerProfile) {
+      setError('No player profile found for this account. Please contact support.');
       setLoading(false);
       return;
     }
 
-    const { data: player, error: profileError } = await supabase
-      .from("players")
-      .select("id")
-      .eq("auth_id", user.id)
-      .single();
-
-    if (profileError || !player) {
-      router.push("/setup");
-    } else {
-      router.push("/homepage");
-    }
+    router.push('/homepage');
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-black text-white px-4">
-      {/* Background Video */}
+    <div className="relative min-h-screen bg-black text-white flex items-center justify-center px-4 overflow-hidden">
       <video
         autoPlay
-        muted
         loop
+        muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover object-[center_40%] z-0"
-        style={{ filter: "brightness(0.4)" }}
+        className="absolute inset-0 w-full h-full object-cover opacity-30"
       >
         <source src="/videos/powerplay-login-bg.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
       </video>
+      <div className="absolute top-8 flex justify-center w-full z-20">
+  <img src="/powerplay-logo.png" alt="PowerPlay Logo" width={180} height={60} />
+</div>
+      <div className="relative z-10 bg-[#0f172a] bg-opacity-90 p-8 rounded-xl shadow-xl max-w-md w-full space-y-6">
+        <h1 className="text-2xl font-bold text-center text-white">Welcome to PowerPlay Soccer</h1>
+<p className="text-center text-gray-300">Log in to your account</p>
+        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-      {/* Dark overlay for legibility */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10" />
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-gray-800 text-white border border-gray-600 rounded px-3 py-2"
+            />
+          </div>
 
-      {/* Login Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="relative z-20 bg-white bg-opacity-90 p-10 rounded-xl shadow-2xl w-full max-w-md border border-gray-200"
-      >
-        <div className="flex flex-col items-center mb-4">
-          <Image src="/powerplay-logo.png" alt="PowerPlay Logo" width={120} height={120} />
-          <p className="text-sm text-gray-600 text-center italic mt-2">
-            Where players lead the game.
-          </p>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-800 text-white border border-gray-600 rounded px-3 py-2"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-cyan-600 hover:bg-cyan-700 px-4 py-2 rounded font-semibold"
+          >
+            {loading ? 'Logging in...' : 'Log In'}
+          </button>
+        </form>
+
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-400">New to PowerPlay?</p>
+          <button
+            onClick={() => router.push('/register')}
+            className="mt-2 text-cyan-400 hover:text-cyan-300 text-sm font-medium"
+          >
+            Create an account
+          </button>
         </div>
-
-        <h1 className="text-3xl font-extrabold text-center text-black mb-6">
-          PowerPlay Soccer
-        </h1>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="mt-1 w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="mt-1 w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
-          />
-        </div>
-
-        {error && <p className="text-red-500 text-sm mb-4">❌ {error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold transition-all shadow-md"
-        >
-          {loading ? "Please wait..." : mode === "signup" ? "Sign Up" : "Log In"}
-        </button>
-
-        <div className="text-sm text-center mt-4 text-black">
-          {mode === "login" ? (
-            <span>
-              Don’t have an account?{' '}
-              <button
-                type="button"
-                className="text-blue-600 hover:underline"
-                onClick={() => setMode("signup")}
-              >
-                Sign Up
-              </button>
-            </span>
-          ) : (
-            <span>
-              Already registered?{' '}
-              <button
-                type="button"
-                className="text-blue-600 hover:underline"
-                onClick={() => setMode("login")}
-              >
-                Log In
-              </button>
-            </span>
-          )}
-        </div>
-      </form>
+      </div>
     </div>
   );
 }
