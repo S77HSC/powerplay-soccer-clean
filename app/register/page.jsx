@@ -68,18 +68,36 @@ export default function RegisterPage() {
       return;
     }
 
-    const { error: insertError } = await supabase.from('players').insert({
-      auth_id: user.id,
-      name,
-      age,
-      country,
-      email,
-      role,
-      team: finalTeam,
-    });
+    let insertError;
+    if (role === 'player') {
+      ({ error: insertError } = await supabase.from('players').insert({
+        auth_id: user.id,
+        name,
+        age,
+        country,
+        email,
+        role,
+        team: finalTeam,
+      }));
+    } else if (role === 'coach') {
+      ({ error: insertError } = await supabase.from('coaches').insert({
+        auth_id: user.id,
+        name,
+        age,
+        country,
+        email,
+        role,
+        team: finalTeam,
+      }));
+    } else {
+      setError('Invalid role selected.');
+      setLoading(false);
+      return;
+    }
 
     if (insertError) {
-      setError('Failed to create player profile.');
+      console.error('Insert error:', insertError.message);
+      setError(insertError.message || 'Failed to create profile.');
       setLoading(false);
       return;
     }
