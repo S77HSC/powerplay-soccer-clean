@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabase';
 
@@ -8,42 +8,25 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-
-    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    console.log('Sign-in result:', loginData, loginError);
-
-    if (loginError || !loginData?.session?.user) {
-      setError(loginError?.message || 'Login failed — invalid credentials.');
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setError(error.message);
       setLoading(false);
       return;
     }
-
-    const user = loginData.session.user;
-
-    const { data: playerProfile, error: playerError } = await supabase
-      .from('players')
-      .select('id')
-      .eq('auth_id', user.id)
-      .maybeSingle();
-
-    if (!playerProfile) {
-      setError('No player profile found for this account. Please contact support.');
-      setLoading(false);
-      return;
+    const { data: userData } = await supabase.from('players').select('role').eq('auth_id', data.user.id).maybeSingle();
+    const role = userData?.role;
+    if (role === 'coach') {
+      router.push('/coach-dashboard');
+    } else {
+      router.push('/player-dashboard');
     }
-
-    router.push('/homepage');
   };
 
   return (
@@ -53,16 +36,18 @@ export default function LoginPage() {
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover opacity-30"
+        className="absolute inset-0 w-full h-full object-cover opacity-30 z-0"
       >
         <source src="/videos/powerplay-login-bg.mp4" type="video/mp4" />
       </video>
-      <div className="absolute top-8 flex justify-center w-full z-20">
-  <img src="/powerplay-logo.png" alt="PowerPlay Logo" width={180} height={60} />
-</div>
-      <div className="relative z-10 bg-[#0f172a] bg-opacity-90 p-8 rounded-xl shadow-xl max-w-md w-full space-y-6">
+
+      <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20">
+        <img src="/powerplay-logo.png" alt="PowerPlay Logo" className="w-36 sm:w-40 md:w-48 lg:w-52 xl:w-56" />
+      </div>
+
+      <div className="relative z-10 bg-[#0f172a] bg-opacity-90 p-8 rounded-xl shadow-xl max-w-md w-full space-y-6 mt-24 sm:mt-32 md:mt-40">
         <h1 className="text-2xl font-bold text-center text-white">Welcome to PowerPlay Soccer</h1>
-<p className="text-center text-gray-300">Log in to your account</p>
+        <p className="text-center text-gray-300">Log in to your account</p>
         {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
         <form onSubmit={handleLogin} className="space-y-4">
@@ -76,7 +61,6 @@ export default function LoginPage() {
               className="w-full bg-gray-800 text-white border border-gray-600 rounded px-3 py-2"
             />
           </div>
-
           <div>
             <label className="block text-sm text-gray-400 mb-1">Password</label>
             <input
@@ -87,7 +71,6 @@ export default function LoginPage() {
               className="w-full bg-gray-800 text-white border border-gray-600 rounded px-3 py-2"
             />
           </div>
-
           <button
             type="submit"
             disabled={loading}
@@ -98,12 +81,12 @@ export default function LoginPage() {
         </form>
 
         <div className="text-center mt-4">
-          <p className="text-sm text-gray-400">New to PowerPlay?</p>
+          <p className="text-sm text-gray-400">Don't have an account?</p>
           <button
             onClick={() => router.push('/register')}
             className="mt-2 text-cyan-400 hover:text-cyan-300 text-sm font-medium"
           >
-            Create an account
+            Register
           </button>
         </div>
       </div>

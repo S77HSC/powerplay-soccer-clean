@@ -16,7 +16,7 @@ const sessionData = {
     video: "/videos/session_2_ticktocks.mp4",
     description: "A controlled inside-outside rhythm drill to master tight ball control.",
     thumbnail: "/videos/session_2_ticktocks-thumbnail.jpg",
-    unlockXP: 100
+    unlockXP: 0
   },
   session_3_ticktockstops: {
     title: "Skill Session 3: Tick Tock Stops",
