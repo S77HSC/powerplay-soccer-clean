@@ -51,7 +51,7 @@ export default function LoginPage() {
     <div className="relative w-screen h-screen overflow-hidden">
       {/* PowerPlay Logo */}
       <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-30 animate-grow-shine">
-        <img src="/logo/powerplay-logo.png" alt="PowerPlay Logo" className="h-28 w-auto" />
+        <img src="/powerplay-logo.png" alt="PowerPlay Logo" className="h-28 w-auto" />
       </div>
 
       {/* Video Background */}
