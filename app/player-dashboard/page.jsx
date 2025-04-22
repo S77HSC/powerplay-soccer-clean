@@ -1,11 +1,9 @@
-// FULL RESTORED VERSION: Player Dashboard
 "use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import PlayerProgressChart from "../../components/PlayerProgressChart";
-import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "../../contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -27,30 +25,42 @@ ChartJS.register(
 );
 
 export default function PlayerDashboard() {
-  const { player, loading } = useAuth();
-  const router = useRouter();
+  const [player, setPlayer] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [xp, setXp] = useState(0);
   const [workouts, setWorkouts] = useState(0);
   const [wins, setWins] = useState(0);
   const [selectedRange, setSelectedRange] = useState("Weekly");
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+    const loadPlayerData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+
       if (!user) {
         router.push('/login');
         return;
       }
-    };
-    checkSession();
-  }, []);
 
-  useEffect(() => {
-    if (!loading && !player) {
-      router.replace("/login");
-    }
-  }, [loading, player, router]);
+      const { data: profile, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('auth_id', user.id)
+        .single();
+
+      if (error || !profile) {
+        router.push('/setup');
+        return;
+      }
+
+      setPlayer(profile);
+      setLoading(false);
+    };
+
+    loadPlayerData();
+  }, [router]);
 
   useEffect(() => {
     if (!player?.id) return;
@@ -67,16 +77,17 @@ export default function PlayerDashboard() {
       }
 
       setSessions(sessionData || []);
-
-      const totalXP = sessionData.reduce((sum, s) => sum + (s.xr_awarded || 0), 0);
-      setXp(totalXP);
+      setXp(sessionData.reduce((sum, s) => sum + (s.xr_awarded || 0), 0));
       setWorkouts(sessionData.length);
-      const winCount = sessionData.filter(s => s.is_win).length;
-      setWins(winCount);
+      setWins(sessionData.filter(s => s.is_win).length);
     };
 
     fetchData();
   }, [player]);
+
+  if (loading) {
+    return <div className="text-white text-center mt-10">Loading dashboard...</div>;
+  }
 
   const groupedData = {};
   (sessions || []).forEach((session) => {
@@ -170,7 +181,6 @@ export default function PlayerDashboard() {
   return (
     <div style={{ background: "#0A0F24", color: "white", padding: "2rem", minHeight: "100vh" }}>
       <div className="max-w-6xl mx-auto">
-        {/* Start New Session Button */}
         <div className="flex justify-end mb-4">
           <button
             onClick={() => router.push('/skill-session')}
@@ -180,7 +190,6 @@ export default function PlayerDashboard() {
           </button>
         </div>
 
-        {/* 🧍‍♂️ Player Profile Block */}
         <div className="flex flex-col md:flex-row items-center justify-between bg-gray-900 p-6 rounded-lg shadow mb-8">
           <div className="flex items-center gap-4">
             {player?.avatar_url ? (

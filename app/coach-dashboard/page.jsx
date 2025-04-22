@@ -87,7 +87,7 @@ export default function CoachDashboard() {
       {players.length === 0 ? (
         <p className="text-gray-400">No players found for this team.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2 mb-10">
           {players.map((p) => (
             <li key={p.id} className="bg-gray-800 rounded-lg px-4 py-2 border border-gray-700 flex justify-between items-center">
               <div>
@@ -102,6 +102,28 @@ export default function CoachDashboard() {
           ))}
         </ul>
       )}
+
+      {/* 🎮 Games Section - All Clickable with Correct Paths */}
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold mb-4">🎮 Games</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <a href="/sacrifice-league/new" className="bg-gray-900 p-4 rounded-lg shadow hover:bg-gray-800 transition cursor-pointer">
+            <img src="tournament-sparkle.png" alt="Power League" className="h-12 mb-2" />
+            <h3 className="text-lg font-semibold text-yellow-400 mb-1">🏆 Power League</h3>
+            <p className="text-sm text-gray-300">Track team competition standings and rankings.</p>
+          </a>
+          <a href="/survivor_mode" className="bg-gray-900 p-4 rounded-lg shadow hover:bg-gray-800 transition cursor-pointer">
+            <img src="/sacrifice_logo.png" alt="Survivor Mode" className="h-12 mb-2" />
+            <h3 className="text-lg font-semibold text-red-400 mb-1">💀 Survivor Mode</h3>
+            <p className="text-sm text-gray-300">Elimination-based challenges. Who survives the session?</p>
+          </a>
+          <a href="/powerplay" className="bg-gray-900 p-4 rounded-lg shadow hover:bg-gray-800 transition cursor-pointer">
+            <img src="/powerplay-logo.png" alt="PowerPlay" className="h-12 mb-2" />
+            <h3 className="text-lg font-semibold text-blue-400 mb-1">⚡ PowerPlay</h3>
+            <p className="text-sm text-gray-300">Fast-paced team drills with scoring and live feedback.</p>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
